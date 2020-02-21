@@ -1,0 +1,12 @@
+find_package (Python3 REQUIRED)
+find_package (Likwid)
+
+set(TARGETFILE "${CMAKE_CURRENT_SOURCE_DIR}/_variables.py")
+file(WRITE ${TARGETFILE}  "##############################\n")
+file(APPEND ${TARGETFILE} "# Automatically generated file\n")
+file(APPEND ${TARGETFILE} "##############################\n")
+file(APPEND ${TARGETFILE} "BINDIR = \"${BINDIR}\"\n")
+file(APPEND ${TARGETFILE} "DATADIR = \"${DATADIR}\"\n")
+file(APPEND ${TARGETFILE} "BUILDDIR = \"${CMAKE_BINARY_DIR}\"\n")
+file(APPEND ${TARGETFILE} "PROJECTDIR = \"${PROJECT_SOURCE_DIR}\"\n")
+file(APPEND ${TARGETFILE} "LIKWID_PIN = \"${LIKWID_PIN}\"\n")

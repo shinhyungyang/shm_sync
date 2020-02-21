@@ -1,0 +1,6 @@
+A patch file to enable lock elision for GNU Ada Runtime Library (GNARL).  
+GCC 6.3.0 is required to apply the patch.
+
+To apply, put gcc-6.3.0 and the patch file together and type 
+patch -p0 --ignore-whitespace < ./GNARL_PO_Elision.patch
+Make sure that GCC directory is named as gcc-6.3.0

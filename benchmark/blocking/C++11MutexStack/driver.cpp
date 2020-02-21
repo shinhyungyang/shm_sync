@@ -1,4 +1,4 @@
-#include"driver.h"
+#include"mutexstack.h"
 #include"globals.h"
 #include"barrier.h"
 #include"stats.h"
@@ -73,7 +73,6 @@ void f_cons(int tid, int nr_pairs, int nr_iter, int nr_exec, bool sc_runs) {
     iter_per_thread = (int) (nr_iter / nr_pairs);
     if ((tid - nr_pairs) < (nr_iter % nr_pairs)) iter_per_thread ++;
   }
-
   for (int run = 0; run < nr_runs; run++) {
     if (sc_runs) {
       iter_per_thread = (int)(nr_iter / (run + 1) );
@@ -88,7 +87,7 @@ void f_cons(int tid, int nr_pairs, int nr_iter, int nr_exec, bool sc_runs) {
         //
         long long nsec_start = PAPI_get_real_nsec();
 
-        sync_consumer(iter_per_thread, tid); // pop
+        sync_consumer(iter_per_thread); // pop
 
         long long nsec_end = PAPI_get_real_nsec();
         enterSample(nsec_end - nsec_start, tid, exec, run);
@@ -145,6 +144,7 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
+  //
   // Initialize PAPI:
   //
   int retval = PAPI_library_init(PAPI_VER_CURRENT);
@@ -196,11 +196,11 @@ int main(int argc, char *argv[]) {
 
   // Lower-half of threads (the producers(push)):
   range_smpl_collector col_lower(2 * nr_pairs, 0, nr_pairs, sc_runs);
-  dumpData(ovw_stats, &col_lower, "COstack_push.txt"); 
+  dumpData(ovw_stats, &col_lower, "MutexStack_push.txt"); 
 
   // Upper-half of threads (the consumers(pop)):
   range_smpl_collector col_upper(2 * nr_pairs, nr_pairs, 2 * nr_pairs, sc_runs);
-  dumpData(ovw_stats, &col_upper, "COstack_pop.txt"); 
+  dumpData(ovw_stats, &col_upper, "MutexStack_pop.txt"); 
 
   //
   // Cleanup and exit:
@@ -208,3 +208,4 @@ int main(int argc, char *argv[]) {
   deleteSamples();
   return 0;
 }
+

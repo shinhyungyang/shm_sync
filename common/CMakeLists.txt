@@ -1,0 +1,8 @@
+if (BUILD_ADA)
+  add_subdirectory(tagged_pointers)
+  add_subdirectory(ada_binding)
+endif()
+add_subdirectory(atomic_intrinsic)
+add_subdirectory(stats)
+add_subdirectory(barrier)
+add_subdirectory(timer)

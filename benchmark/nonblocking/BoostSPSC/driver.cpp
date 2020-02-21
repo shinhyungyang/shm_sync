@@ -1,4 +1,4 @@
-#include"driver.h"
+#include"boost_spsc.h"
 #include"globals.h"
 #include"barrier.h"
 #include"stats.h"
@@ -11,27 +11,32 @@
 #include<cstdlib>
 #include<cstring>
 #include<iostream>
+#include<boost/lockfree/spsc_queue.hpp>
+#include<vector>
 
 //
-// Producer(Pushing) thread function:
+// Producer thread function:
 //
 
-void f_prod(int tid, int nr_pairs, int nr_iter, int nr_exec, bool sc_runs) {
+void f_prod(int tid, int nr_pairs, int nr_iter, int nr_exec, bool sc_runs, 
+    boost::lockfree::spsc_queue<int, boost::lockfree::capacity<1024> >* queue){
+
   if (PAPI_thread_init(pthread_self) != PAPI_OK) {
     std::cerr << "PAPI_thread_init failed (tid: " << tid << ")" << std::endl;
     exit(EXIT_FAILURE);
   }
 
-  const int nr_runs = sc_runs?nr_pairs:1;
+  int nr_pairs_lower_bound = 1;
   int iter_per_thread = 0;
 
   if (!sc_runs) {
-    // No scaling runs from 1 .. nr_threads:
-    iter_per_thread = (int) (nr_iter / nr_pairs);
+    // No scaling runs from 1 .. nr_pairs:
+    nr_pairs_lower_bound = nr_pairs;
+    iter_per_thread = (int)(nr_iter / nr_pairs);
     if (tid < (nr_iter % nr_pairs)) iter_per_thread ++;
   }
 
-  for (int run = 0; run < nr_runs; run++) {
+  for (int run = 0; run <= nr_pairs - nr_pairs_lower_bound; run++) {
     if (sc_runs) {
       iter_per_thread = (int)(nr_iter / (run + 1) );
       if (tid < (nr_iter % (run + 1))) iter_per_thread ++;
@@ -45,7 +50,7 @@ void f_prod(int tid, int nr_pairs, int nr_iter, int nr_exec, bool sc_runs) {
         //
         long long nsec_start = PAPI_get_real_nsec();
 
-        sync_producer(iter_per_thread); // Push
+        sync_producer(iter_per_thread, queue);
 
         long long nsec_end = PAPI_get_real_nsec();
         enterSample(nsec_end - nsec_start, tid, exec, run);
@@ -56,25 +61,28 @@ void f_prod(int tid, int nr_pairs, int nr_iter, int nr_exec, bool sc_runs) {
 
 
 //
-// Consumer(Popping) thread function:
+// Consumer thread function:
 //
 
-void f_cons(int tid, int nr_pairs, int nr_iter, int nr_exec, bool sc_runs) {
+void f_cons(int tid, int nr_pairs, int nr_iter, int nr_exec, bool sc_runs, 
+    boost::lockfree::spsc_queue<int, boost::lockfree::capacity<1024> >* queue) {
+
   if (PAPI_thread_init(pthread_self) != PAPI_OK) {
     std::cerr << "PAPI_thread_init failed (tid: " << tid << ")" << std::endl;
     exit(EXIT_FAILURE);
   }
 
-  const int nr_runs = sc_runs?nr_pairs:1;
+  int nr_pairs_lower_bound = 1;
   int iter_per_thread = 0;
 
   if (!sc_runs) {
-    // No scaling runs from 1 .. nr_threads:
-    iter_per_thread = (int) (nr_iter / nr_pairs);
-    if ((tid - nr_pairs) < (nr_iter % nr_pairs)) iter_per_thread ++;
+    // No scaling runs from 1 .. nr_pairs:
+    nr_pairs_lower_bound = nr_pairs;
+    iter_per_thread = (int)(nr_iter / nr_pairs);
+    if (tid < (nr_iter % nr_pairs)) iter_per_thread ++;
   }
 
-  for (int run = 0; run < nr_runs; run++) {
+  for (int run = 0; run <= nr_pairs - nr_pairs_lower_bound; run++) {
     if (sc_runs) {
       iter_per_thread = (int)(nr_iter / (run + 1) );
       if ((tid - nr_pairs) < (nr_iter % (run + 1))) iter_per_thread ++;
@@ -88,7 +96,7 @@ void f_cons(int tid, int nr_pairs, int nr_iter, int nr_exec, bool sc_runs) {
         //
         long long nsec_start = PAPI_get_real_nsec();
 
-        sync_consumer(iter_per_thread, tid); // pop
+        sync_consumer(iter_per_thread, queue);
 
         long long nsec_end = PAPI_get_real_nsec();
         enterSample(nsec_end - nsec_start, tid, exec, run);
@@ -113,14 +121,14 @@ int main(int argc, char *argv[]) {
   //
   // Parse command-line arguments:
   //
-  cxxopts::Options options("COstack",
-                           "Hazard Pointer based Concurrent Stack "
+  cxxopts::Options options("boost_spsc",
+                           "Boost single-writer single-consumer "
                            "synchronization algorithm");
   options
     .add_options()
       ("e,executions", "Number of executions", cxxopts::value<int>(nr_exec))
       ("i,iterations", "Number of iterations", cxxopts::value<int>(nr_iter))
-      ("t,threadpairs", "Number of push/pop thread-pairs",
+      ("t,threadpairs", "Number of prod/cons thread-pairs",
           cxxopts::value<int>(nr_pairs))
       ("r,runs", "Scaling runs, 1..t thread-pairs",
           cxxopts::value<bool>(sc_runs))
@@ -165,12 +173,19 @@ int main(int argc, char *argv[]) {
 
   //
   // Create/join threads for benchmark:
+  // Boost SPSC requires queues for each pair (nr_pairs number of queues in total)
   //
   std::thread tids[2 * nr_pairs];
+  std::vector<boost::lockfree::spsc_queue<int, boost::lockfree::capacity<1024>>*> queues;
+  for (int i = 0; i != nr_pairs; ++i) {
+    auto* queue = new boost::lockfree::spsc_queue<int, boost::lockfree::capacity<1024>>();
+    queues.push_back(queue);
+  }
+
   for (tid = 0; tid<nr_pairs; tid++) {
     //
     // For the sample collection, we align the threads into an array of
-    // producers(push) followed by the consumers(pop):
+    // producers followed by the consumers:
     //
     // p_1 p_2 ... p_n c_1 c_2 ... c_n
     // |---- p_id ---| |---- c_id ---|
@@ -181,10 +196,11 @@ int main(int argc, char *argv[]) {
     int p_id = tid;
     int c_id = tid + nr_pairs;
     tids[p_id] = std::thread(f_prod, p_id, nr_pairs,
-                            nr_iter, nr_exec, sc_runs);
+                            nr_iter, nr_exec, sc_runs, queues[tid]);
     tids[c_id] = std::thread(f_cons, c_id, nr_pairs,
-                            nr_iter, nr_exec, sc_runs);
+                            nr_iter, nr_exec, sc_runs, queues[tid]);
   }
+
   for (tid = 0; tid<nr_pairs; tid++) {
     tids[tid].join();
     tids[tid + nr_pairs].join();
@@ -194,17 +210,21 @@ int main(int argc, char *argv[]) {
   // Collect statistics from sampled data:
   //
 
-  // Lower-half of threads (the producers(push)):
+  // Lower-half of threads (the producers):
   range_smpl_collector col_lower(2 * nr_pairs, 0, nr_pairs, sc_runs);
-  dumpData(ovw_stats, &col_lower, "COstack_push.txt"); 
+  dumpData(ovw_stats, &col_lower, "boost_spsc_producers.txt"); 
 
-  // Upper-half of threads (the consumers(pop)):
+  // Upper-half of threads (the consumers):
   range_smpl_collector col_upper(2 * nr_pairs, nr_pairs, 2 * nr_pairs, sc_runs);
-  dumpData(ovw_stats, &col_upper, "COstack_pop.txt"); 
+  dumpData(ovw_stats, &col_upper, "boost_spsc_consumers.txt"); 
 
   //
   // Cleanup and exit:
+  // queues for spsc should be deallocated before exit
   //
   deleteSamples();
+  for(int i= 0; i != nr_pairs; ++i) {
+    delete queues [i];
+  }
   return 0;
 }

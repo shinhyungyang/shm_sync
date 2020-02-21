@@ -1,0 +1,11 @@
+set(BINDIR ${BINDIR}/nonblocking)
+
+if (BUILD_CXX)
+  add_subdirectory(BoostMPMC)
+  add_subdirectory(BoostSPSC)
+  add_subdirectory(BQueue)
+  add_subdirectory(COstack)
+endif()
+if (BUILD_ADA)
+  add_subdirectory(AdaLockfree)
+endif()
