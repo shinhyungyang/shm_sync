@@ -140,9 +140,11 @@ $ python3 ./Drawing.py sample_ArrayLock.txt sample_CLHQueueLock.txt -t 28 14 -i 
 ```
 Result Plot
 
-<img src=" image/stats_sample_ArrayLock_ExecutionTime.png" width="450px" height="300px" title="arraylock_plot" alt="arraylock"></img><br/>
+```<img src=" image/stats_sample_ArrayLock_ExecutionTime.png" width="450px" height="300px" title="arraylock_plot" alt="arraylock"></img><br/>
+![ScreenShot](/image/stats_sample_ArrayLock_ExecutionTime.png)
 
-<img src=" image/stats_sample_CLHQueueLock_ExecutionTime.png" width="450px" height="300px" title="CLHQueuelock_plot" alt="clhqueuelock"></img><br/>
+```<img src=" image/stats_sample_CLHQueueLock_ExecutionTime.png" width="450px" height="300px" title="CLHQueuelock_plot" alt="clhqueuelock"></img><br/>
+![ScreenShot] (/image/stats_sample_CLHQueueLock_ExecutionTime.png)
 
 To plot given sample_ArrayLock.txt and sample_TATASLock.txt into a single figure, use "-c" flag.
 But their [number_of_threads] for -t and [number_of_iterations] for -i should be same.
@@ -151,7 +153,8 @@ $ python3 ./Drawing.py sample_ArrayLock.txt sample_TATASLock.txt -t 28 14 -i 100
 ```
 Result plot
 
-<img src=" image/stats_combined_ExecutionTime.png" width="450px" height="300px" title="combined_plot" alt="combined"></img><br/>
+```<img src=" image/stats_combined_ExecutionTime.png" width="450px" height="300px" title="combined_plot" alt="combined"></img><br/>
+![ScreenShot] (/image/stats_combined_ExecutionTime.png)
 
 ## Troubleshooting
 
