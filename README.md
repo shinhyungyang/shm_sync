@@ -5,21 +5,24 @@ This repository contains companion code for the following paper:
 Shinhyung Yang, Seongho Jeong, Byunguk Min, Yeonsoo Kim, Bernd Burgstaller, and Johann Blieberger.<br/>
 *Design-space evaluation for non-blocking synchronization in Ada:
 lock elision of protected objects, concurrent objects, and low-level atomics*.
-Technical Report TR-0004, ELC Lab, Department of Computer Science, Yonsei University, 2020. \[[pdf](https://elc.yonsei.ac.kr/publications/TR_Ada_nb_sync.pdf)\]
+Journal of Systems Architecture 110:101764, Elsevier, Nov. 2020. 
+\[[pdf](https://doi.org/10.1016/j.sysarc.2020.101764)\] (open access)
 
 If you use this code, please cite the paper using the below BibTeX reference.
 
 ```
-@techreport{shmsync:TR,
+@article{shmsync,
   title = {Design-space evaluation for non-blocking synchronization in {Ada}:
            lock elision of protected objects, concurrent objects, and
            low-level atomics},
   author = {Shinhyung Yang and Seongho Jeong and Byunguk Min and Yeonsoo Kim
             and Bernd Burgstaller and Johann Blieberger},
-  institution = {Yonsei University, Department of Computer Science},
-  number = {TR 0004},
-  month = {February},
-  year = {2020},
+  journal = "Journal of Systems Architecture",
+  volume = "110",
+  pages = "101764",
+  year = "2020",
+  issn = "1383-7621",
+  doi = "https://doi.org/10.1016/j.sysarc.2020.101764",
 }
 ```
 
@@ -33,6 +36,7 @@ incurred by a sequentially consistent high-level language memory model.
 
 ###### **News**
 * [x] Feb 10, 2020: GitHub repository created 
+* [x] Nov 24, 2020: Added link to published paper 
 
 
 ## Prerequisites
